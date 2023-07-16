@@ -1,5 +1,5 @@
 <!-- ChipClick.vue
-
+A mudança do estilo do horário selecionado funciona. Só está implementada "na manhã".
 -->
 <template>
   <q-page>
@@ -19,26 +19,12 @@
   </q-card>
 </div>
 
-<!--
-  <div class="q-pa-lg">
-  <q-card class="card">
-    <q-card-section class="fixed-card-2" style="font-size: 16px;">
-      <div class="q-mb-md" style="font-size: 20px; font-weight: bold;">Horários disponíveis</div>
- <img class="arrow-down" src="arrow.png" alt="Seta para baixo" />       
-    </q-card-section>
-  </q-card>
-</div>
--->
-
     <!-- Iterate over Each Item in dateTimeArray to Create Date-Time Cards -->
     <div class="q-pa-lg">
       
       <q-card v-for="(item, index) in dateTimeArray" :key="index" class="card">
         
         <q-card-section>
-<!--          <div class="date">Em {{ item.date }}</div>  
-         <div class="date">Em {{ new Date(item.date).toLocaleDateString() }}</div>  
-  <div class="date">Em {{ new Intl.DateTimeFormat('pt-BR').format(new Date(item.date)) }}</div> -->
   <div class="date">{{ new Date(item.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }}</div>
 </q-card-section>
 
@@ -52,27 +38,20 @@
               @update:modelValue="cardStates[item.date].isMorningExpanded = $event"
             >
               <template v-slot:header>
-<!--                <div class="expandable-header">Manhã</div> -->
                 <div class="expandable-header">
           {{ cardStates[item.date].isMorningExpanded ? textMorningExpanded : textMorningNotExpanded }}
         </div>
               </template>
 
               <div class="expandable-content">
-<!--                <div class="chip" 
-                     v-for="(time, chipIndex) in item.timesBefore"
-                     :key="chipIndex" 
-                     @click="chipClickHandler(item.date, time)">
-                  {{ time }}
-                </div> -->
-                <div class="chip" 
-     :class="{ 'chip-confirmed': confirmedDateTime.value && confirmedDateTime.value.date === item.date && confirmedDateTime.value.time === time }"
-     v-for="(time, chipIndex) in item.timesBefore"
-     :key="chipIndex" 
-     @click="chipClickHandler(item.date, time)">
-     {{ time }}    {{ item.date }} <!-- {{ confirmedDateTime.value.date }} -->
-  </div>
-
+<!-- AQUI ESTÁ A MUDANÇA RECENTE -->
+              <div class="chip" 
+    :class="{ 'chip-confirmed': isSlotConfirmed(item.date, time).value }"
+    v-for="(time, chipIndex) in item.timesBefore"
+    :key="chipIndex" 
+    @click="chipClickHandler(item.date, time)">
+  {{ item.date }} {{ time }} 
+</div>
               </div>
             </q-expansion-item>
           </div>
@@ -94,6 +73,7 @@
               </template>
 
               <div class="expandable-content">
+                <!-- É NECESSARIO MUDAR TAMBEM AQUI -->
                 <div class="chip"
                      v-for="(time, chipIndex) in item.timesAfter"
                      :key="chipIndex"
@@ -110,16 +90,8 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue';
-// import { Dialog } from 'quasar';
-// import { useQuasar } from 'quasar';
-// import { ref, watch, onMounted, watchEffect } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
 import { Dialog } from 'quasar';
-
-// ...
-
-// During setup
-//const $q = useQuasar();
 
 // Reactive References
 const dateTimeArray = ref([]);
@@ -131,18 +103,21 @@ const textMorningExpanded = ref('Manhã');
 const textMorningNotExpanded = ref('Mostrar esta manhã');
 const textAfternoonExpanded = ref('Tarde');
 const textAfternoonNotExpanded = ref('Mostrar esta tarde');
-//
-const confirmedDateTime = ref({ date: '', time: '' });
+// Confirmed slots
+const confirmedSlots = ref({});
+
+// Check if a slot is confirmed
+function isSlotConfirmed(date, time) {
+  return computed(() => confirmedSlots.value[date] === time);
+}
 
 // Available Time Options
 const timeOptions = [
   {
-    /* label: 'Da manhã (até as ' + divisionTime.value + ')', */
     label: 'Da manhã',
     value: 'morning'
   },
   {
-    //label: 'Tarde',
     label: 'Da tarde (depois das ' + divisionTime.value + ')',
     value: 'afternoon'
   },
@@ -177,6 +152,9 @@ function generateDateTimeArray() {
     const divisionMinute = Number(divisionTime.value.split(':')[1]);
     const timesBefore = [];
     const timesAfter = [];
+    //
+    // const datesLocaleHBP = [];
+    //
 
     for (let hour = 8; hour <= 18; hour++) {
       const timeString = hour.toString().padStart(2, '0') + ':00';
@@ -193,7 +171,7 @@ function generateDateTimeArray() {
 
     dateTimeArray.push({ date: dateString, timesBefore, timesAfter });
   }
-
+// console.log(...dateTimeArray);
   return dateTimeArray;
 }
 
@@ -217,37 +195,20 @@ function watchSelectedTime() {
   });
 }
 
-/* Handler for Click Events on Time Chips
-function chipClickHandler(date, time) {
-  console.log('Chip clicked - Date:', date, 'Time:', time);
-} */
-
 // Handler for Click Events on Time Chips
 function chipClickHandler(date, time) {
-  
-/* In this code, we first create a Date object based on the local timezone. Then, we get the timezone offset in minutes and 
-subtract it from the Date object. This adjusts the date to match the date part of the ISO string that was used to create it. 
-Now, when you print localDate, it should give the correct date.
-*/
+
+// INICIO DE TRECHO INUTIL ?
 // Get the date in the local timezone
 let localDate = new Date(date);
-
 // Get the timezone offset in minutes
 let timezoneOffsetMinutes = localDate.getTimezoneOffset();
-
 // Subtract the timezone offset from the local date
 localDate.setMinutes(localDate.getMinutes() - timezoneOffsetMinutes);
+// FINAL DE TRECHO INUTIL ?
 
   Dialog.create({
   title: 'Confirmar a sua escolha',
-  /* message: `
-    <span style="font-size: 20px;">
-      Você escolheu 
-      ${new Date(date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} 
-      às ${time}. Confirma?
-    </span>
-  `,
-  html: true,  // Note this line, it's necessary to render HTML in the message */
   message: `
   <div style="font-size: 20px;">
     <div>Você escolheu:</div>
@@ -263,23 +224,16 @@ localDate.setMinutes(localDate.getMinutes() - timezoneOffsetMinutes);
   },
     cancel: true,
     persistent: true
-  }).onOk(() => {
-    confirmedDateTime.value = { localDate, time }; // novo
-    /* add some console.log statements to
-    - your chipClickHandler function and 
-    - your template.
 
-    For example, you could log the values of confirmedDateTime.value, item.date, and time each time a chip is rendered, 
-    and also log the value of confirmedDateTime.value each time it's updated. */
-    console.log('confirmedDateTime.value', confirmedDateTime.value);
-
-// Now you can use `localDate` instead of `date`:
-console.log('Confirmed! Chip clicked - Date:', localDate, 'Time:', time);
+}).onOk(() => {
+    confirmedSlots.value[date] = time; // Update the confirmed slots
+    console.log('confirmedSlots.value : ', confirmedSlots.value);
   }).onCancel(() => {
     console.log('Selection cancelled');
   }).onDismiss(() => {
     console.log('Dialog dismissed');
   });
+
 }
 
 </script>
@@ -355,7 +309,9 @@ console.log('Confirmed! Chip clicked - Date:', localDate, 'Time:', time);
 }
 
 .chip-confirmed {
-  background-color: blue;
+  background-color: lightblue;
+  border-width: 22px;
+  border-color: blue !important;
 }
 
 </style>

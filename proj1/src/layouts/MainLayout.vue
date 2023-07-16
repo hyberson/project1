@@ -47,6 +47,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+
 import EssentialLink, { EssentialLinkProps } from 'components/EssentialLink.vue';
 
 const essentialLinks: EssentialLinkProps[] = [
@@ -54,13 +55,16 @@ const essentialLinks: EssentialLinkProps[] = [
     title: 'Docs',
     caption: 'quasar.dev',
     icon: 'school',
-    link: 'https://quasar.dev'
+    // link: 'https://quasar.dev'
+    link: 'https://hyberson-ideal-meme-r7wr96w4gj9cp9xv-9000.preview.app.github.dev/'
   },
   {
     title: 'Github',
     caption: 'github.com/quasarframework',
     icon: 'code',
-    link: 'https://github.com/quasarframework'
+    // link: 'https://github.com/quasarframework'
+    // link: 'https://hyberson-ideal-meme-r7wr96w4gj9cp9xv-9000.preview.app.github.dev/#/appointment-two/quinta-2-de-maio-de-2021-12h00'
+    link: 'https://hyberson-ideal-meme-r7wr96w4gj9cp9xv-9000.preview.app.github.dev/#/appointment-two/paramAppointmentDateTime'
   },
   {
     title: 'Discord Chat Channel',

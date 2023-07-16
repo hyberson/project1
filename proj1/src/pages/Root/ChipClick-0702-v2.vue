@@ -1,10 +1,7 @@
 <!-- ChipClick.vue
-  
-I want to text in the expandable-header ("À tarde") not to be fixed. Instead, the text will change, in the following way: 
-when the item is expanded, the expandable-header will show the value of the textAfternoonExpanded variable; 
-when the item is not expanded, the expandable-header will show the value of the textAfternoonNotExpanded variable.
-
-The other expandable-header ("Pela manhã") shall have an analogous behavior.
+- O horário selecionado muda de estilo.
+- Há uma notificação quando o usuário não confirma a escolha.
+- Um slot que foi confirmado não é clicável.
 -->
 <template>
   <q-page>
@@ -18,29 +15,20 @@ The other expandable-header ("Pela manhã") shall have an analogous behavior.
         v-model="selectedTime"
         :options="timeOptions"
         color="primary"
-        style="font-size: 18px;"
+        style="font-size: 20px;"
       />
     </q-card-section> 
   </q-card>
 </div>
 
-<!--
-  <div class="q-pa-lg">
-  <q-card class="card">
-    <q-card-section class="fixed-card-2" style="font-size: 16px;">
-      <div class="q-mb-md" style="font-size: 20px; font-weight: bold;">Horários disponíveis</div>
- <img class="arrow-down" src="arrow.png" alt="Seta para baixo" />       
-    </q-card-section>
-  </q-card>
-</div>
--->
-
     <!-- Iterate over Each Item in dateTimeArray to Create Date-Time Cards -->
     <div class="q-pa-lg">
+      
       <q-card v-for="(item, index) in dateTimeArray" :key="index" class="card">
+        
         <q-card-section>
-          <div class="date">Em {{ item.date }}</div>
-        </q-card-section>
+  <div class="date">{{ new Date(item.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }}</div>
+</q-card-section>
 
         <q-separator color="gray" inset />
         
@@ -52,19 +40,20 @@ The other expandable-header ("Pela manhã") shall have an analogous behavior.
               @update:modelValue="cardStates[item.date].isMorningExpanded = $event"
             >
               <template v-slot:header>
-<!--                <div class="expandable-header">Pela manhã</div> -->
                 <div class="expandable-header">
           {{ cardStates[item.date].isMorningExpanded ? textMorningExpanded : textMorningNotExpanded }}
         </div>
               </template>
 
               <div class="expandable-content">
-                <div class="chip"
-                     v-for="(time, chipIndex) in item.timesBefore"
-                     :key="chipIndex"
-                     @click="chipClickHandler(item.date, time)">
-                  {{ time }}
-                </div>
+<!-- AQUI ESTÁ A MUDANÇA RECENTE -->
+<div class="chip" 
+  :class="{ 'chip-confirmed': isSlotConfirmed(item.date, time).value }"
+  v-for="(time, chipIndex) in item.timesBefore"
+  :key="chipIndex" 
+  @click="isSlotConfirmed(item.date, time).value ? null : chipClickHandler(item.date, time)">
+  {{ time }}
+</div>
               </div>
             </q-expansion-item>
           </div>
@@ -86,12 +75,14 @@ The other expandable-header ("Pela manhã") shall have an analogous behavior.
               </template>
 
               <div class="expandable-content">
-                <div class="chip"
-                     v-for="(time, chipIndex) in item.timesAfter"
-                     :key="chipIndex"
-                     @click="chipClickHandler(item.date, time)">
-                  {{ time }}
-                </div>
+<!-- AQUI ESTÁ A MUDANÇA RECENTE -->
+<div class="chip"
+  :class="{ 'chip-confirmed': isSlotConfirmed(item.date, time).value }"
+  v-for="(time, chipIndex) in item.timesAfter"
+  :key="chipIndex"
+  @click="isSlotConfirmed(item.date, time).value ? null : chipClickHandler(item.date, time)">
+  {{ time }}
+</div>
               </div>
             </q-expansion-item>
           </div>
@@ -102,7 +93,9 @@ The other expandable-header ("Pela manhã") shall have an analogous behavior.
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
+import { Dialog } from 'quasar';
+import { Notify } from 'quasar';
 
 // Reactive References
 const dateTimeArray = ref([]);
@@ -110,25 +103,30 @@ const divisionTime = ref('12:00');
 const selectedTime = ref('both');
 const cardStates = ref({});
 //
-const textMorningExpanded = ref('Pela manhã');
-const textMorningNotExpanded = ref('Mostrar os horários da manhã');
-const textAfternoonExpanded = ref('À tarde');
-const textAfternoonNotExpanded = ref('Mostrar os horários da tarde');
+const textMorningExpanded = ref('Manhã');
+const textMorningNotExpanded = ref('Mostrar esta manhã');
+const textAfternoonExpanded = ref('Tarde');
+const textAfternoonNotExpanded = ref('Mostrar esta tarde');
+// Confirmed slots
+const confirmedSlots = ref({});
+
+// Check if a slot is confirmed
+function isSlotConfirmed(date, time) {
+  return computed(() => confirmedSlots.value[date] === time);
+}
 
 // Available Time Options
 const timeOptions = [
   {
-//    label: 'Durante a manhã' + ' aaa',
-label: 'Da manhã (iniciando até as ' + divisionTime.value + ')',
+    label: 'Da manhã',
     value: 'morning'
   },
   {
-    //label: 'Tarde',
-    label: 'Da tarde (iniciando depois das ' + divisionTime.value + ')',
+    label: 'Da tarde (depois das ' + divisionTime.value + ')',
     value: 'afternoon'
   },
   {
-    label: 'Todos os horários (manhã e tarde)',
+    label: 'Todos',
     value: 'both'
   }
 ];
@@ -158,6 +156,9 @@ function generateDateTimeArray() {
     const divisionMinute = Number(divisionTime.value.split(':')[1]);
     const timesBefore = [];
     const timesAfter = [];
+    //
+    // const datesLocaleHBP = [];
+    //
 
     for (let hour = 8; hour <= 18; hour++) {
       const timeString = hour.toString().padStart(2, '0') + ':00';
@@ -174,7 +175,7 @@ function generateDateTimeArray() {
 
     dateTimeArray.push({ date: dateString, timesBefore, timesAfter });
   }
-
+// console.log(...dateTimeArray);
   return dateTimeArray;
 }
 
@@ -200,8 +201,59 @@ function watchSelectedTime() {
 
 // Handler for Click Events on Time Chips
 function chipClickHandler(date, time) {
-  console.log('Chip clicked - Date:', date, 'Time:', time);
+
+// INICIO DE TRECHO INUTIL ?
+// Get the date in the local timezone
+let localDate = new Date(date);
+// Get the timezone offset in minutes
+let timezoneOffsetMinutes = localDate.getTimezoneOffset();
+// Subtract the timezone offset from the local date
+localDate.setMinutes(localDate.getMinutes() - timezoneOffsetMinutes);
+// FINAL DE TRECHO INUTIL ?
+
+  Dialog.create({
+  title: 'Escolher um horário',
+  message: `
+  <div style="font-size: 20px;">
+    <div>Você clicou em:</div>
+    <div style="color: red; font-weight: bold">${new Date(date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
+    <div style="color: red; font-weight: bold">às ${time}.</div>
+    <div>Confirma a sua escolha?</div>
+  </div>
+`,
+  html: true,
+  ok: {
+    label: 'Confirmar',
+    color: 'primary',
+  },
+    cancel: true,
+    persistent: true
+
+}).onOk(() => {
+    confirmedSlots.value[date] = time; // Update the confirmed slots
+    console.log('confirmedSlots.value : ', confirmedSlots.value);
+
+  }).onCancel(() => {
+  console.log('Selection cancelled');
+  Notify.create({
+    color: 'negative',
+    message: 'Você não confirmou a escolha',
+    position: 'center',
+    timeout: 1000
+  });
+
+/* }).onDismiss(() => {
+  console.log('Dialog dismissed');
+  Notify.create({
+    color: 'warning',
+    message: 'Você não confirmou a escolha do horário',
+    position: 'top',
+    timeout: 2000
+  }); */
+});
+
 }
+
 </script>
 
 <style scoped>
@@ -242,6 +294,7 @@ function chipClickHandler(date, time) {
 .date {
   font-weight: bold;
   font-size: 24px;
+  color: red;
 }
 .times {
   display: flex;
@@ -254,7 +307,7 @@ function chipClickHandler(date, time) {
   font-weight: bold;
   font-size: 22px;
   cursor: pointer;
-  color: red;
+  color: gray;
 }
 
 .expandable-content {
@@ -272,4 +325,10 @@ function chipClickHandler(date, time) {
   margin-right: 15px;
   margin-bottom: 15px;
 }
+
+.chip-confirmed {
+  background-color: lightsteelblue;
+  border-radius: 1px;
+}
+
 </style>

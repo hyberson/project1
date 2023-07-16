@@ -6,9 +6,9 @@ const routes: RouteRecordRaw[] = [
     component: () => import('layouts/MainLayout.vue'),
     children: [
 
-      { path: 'test-auth',
+      { path: 'jhehjejej',
         name: 'Test', 
-        component: () => import('pages/TestAuth.vue') // <===========================
+        component: () => import('pages/TestOne.vue')
       },
 
       { path: '',
@@ -48,16 +48,6 @@ const routes: RouteRecordRaw[] = [
         name: 'Login', // -----------------------------------------> SignIn
         component: () => import('pages/LoginPage.vue')
       },
-
-      { path: 'passwordless-login',  
-        name: 'PasswordlessLogin', // -----------------------------------------> SignIn
-        component: () => import('pages/PasswordlessLogin.vue')
-      },
-
-      { path: 'contact',  
-        name: 'ContactPage', // -----------------------------------------> SignIn
-        component: () => import('pages/ContactPage.vue')
-      },    
     ]
   },
 

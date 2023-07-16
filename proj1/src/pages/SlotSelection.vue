@@ -1,5 +1,6 @@
 <!-- ChipClick.vue
-      A Vue Component to Demonstrate the Chip Click Functionality
+-------- I want the app to navigate to a page that will show the profile of a certain professional when the choice of 
+the time slot is confirmed. Later we will create that other page.
 -->
 <template>
   <q-page>
@@ -13,29 +14,20 @@
         v-model="selectedTime"
         :options="timeOptions"
         color="primary"
-        style="font-size: 18px;"
+        style="font-size: 20px;"
       />
     </q-card-section> 
   </q-card>
 </div>
 
-<!--
-  <div class="q-pa-lg">
-  <q-card class="card">
-    <q-card-section class="fixed-card-2" style="font-size: 16px;">
-      <div class="q-mb-md" style="font-size: 20px; font-weight: bold;">Horários disponíveis</div>
- <img class="arrow-down" src="arrow.png" alt="Seta para baixo" />       
-    </q-card-section>
-  </q-card>
-</div>
--->
-
     <!-- Iterate over Each Item in dateTimeArray to Create Date-Time Cards -->
     <div class="q-pa-lg">
+      
       <q-card v-for="(item, index) in dateTimeArray" :key="index" class="card">
+        
         <q-card-section>
-          <div class="date">Em {{ item.date }}</div>
-        </q-card-section>
+  <div class="date">{{ new Date(item.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }}</div>
+</q-card-section>
 
         <q-separator color="gray" inset />
         
@@ -47,16 +39,20 @@
               @update:modelValue="cardStates[item.date].isMorningExpanded = $event"
             >
               <template v-slot:header>
-                <div class="expandable-header">Pela manhã</div>
+                <div class="expandable-header">
+          {{ cardStates[item.date].isMorningExpanded ? textMorningExpanded : textMorningNotExpanded }}
+        </div>
               </template>
 
               <div class="expandable-content">
-                <div class="chip"
-                     v-for="(time, chipIndex) in item.timesBefore"
-                     :key="chipIndex"
-                     @click="chipClickHandler(item.date, time)">
-                  {{ time }}
-                </div>
+<!-- AQUI ESTÁ A MUDANÇA RECENTE -->
+<div class="chip" 
+  :class="{ 'chip-confirmed': isSlotConfirmed(item.date, time).value }"
+  v-for="(time, chipIndex) in item.timesBefore"
+  :key="chipIndex" 
+  @click="isSlotConfirmed(item.date, time).value ? null : chipClickHandler(item.date, time)">
+  {{ time }}
+</div>
               </div>
             </q-expansion-item>
           </div>
@@ -72,16 +68,20 @@
               @update:modelValue="cardStates[item.date].isAfternoonExpanded = $event"
             >
               <template v-slot:header>
-                <div class="expandable-header">À tarde</div>
+                <div class="expandable-header">
+          {{ cardStates[item.date].isAfternoonExpanded ? textAfternoonExpanded : textAfternoonNotExpanded }}
+        </div>
               </template>
 
               <div class="expandable-content">
-                <div class="chip"
-                     v-for="(time, chipIndex) in item.timesAfter"
-                     :key="chipIndex"
-                     @click="chipClickHandler(item.date, time)">
-                  {{ time }}
-                </div>
+<!-- AQUI ESTÁ A MUDANÇA RECENTE -->
+<div class="chip"
+  :class="{ 'chip-confirmed': isSlotConfirmed(item.date, time).value }"
+  v-for="(time, chipIndex) in item.timesAfter"
+  :key="chipIndex"
+  @click="isSlotConfirmed(item.date, time).value ? null : chipClickHandler(item.date, time)">
+  {{ time }}
+</div>
               </div>
             </q-expansion-item>
           </div>
@@ -92,28 +92,43 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
+import { Dialog, Notify } from 'quasar';
+import { useRouter } from 'vue-router';
+
+// Inside the setup function
+const router = useRouter();
 
 // Reactive References
 const dateTimeArray = ref([]);
 const divisionTime = ref('12:00');
 const selectedTime = ref('both');
 const cardStates = ref({});
+//
+const textMorningExpanded = ref('Manhã');
+const textMorningNotExpanded = ref('Mostrar esta manhã');
+const textAfternoonExpanded = ref('Tarde');
+const textAfternoonNotExpanded = ref('Mostrar esta tarde');
+// Confirmed slots
+const confirmedSlots = ref({});
+
+// Check if a slot is confirmed
+function isSlotConfirmed(date, time) {
+  return computed(() => confirmedSlots.value[date] === time);
+}
 
 // Available Time Options
 const timeOptions = [
   {
-//    label: 'Durante a manhã' + ' aaa',
-label: 'Da manhã (iniciando até as ' + divisionTime.value + ')',
+    label: 'Da manhã',
     value: 'morning'
   },
   {
-    //label: 'Tarde',
-    label: 'Da tarde (iniciando depois das ' + divisionTime.value + ')',
+    label: 'Da tarde (depois das ' + divisionTime.value + ')',
     value: 'afternoon'
   },
   {
-    label: 'Todos os horários (manhã e tarde)',
+    label: 'Todos',
     value: 'both'
   }
 ];
@@ -143,6 +158,9 @@ function generateDateTimeArray() {
     const divisionMinute = Number(divisionTime.value.split(':')[1]);
     const timesBefore = [];
     const timesAfter = [];
+    //
+    // const datesLocaleHBP = [];
+    //
 
     for (let hour = 8; hour <= 18; hour++) {
       const timeString = hour.toString().padStart(2, '0') + ':00';
@@ -159,7 +177,7 @@ function generateDateTimeArray() {
 
     dateTimeArray.push({ date: dateString, timesBefore, timesAfter });
   }
-
+// console.log(...dateTimeArray);
   return dateTimeArray;
 }
 
@@ -185,8 +203,102 @@ function watchSelectedTime() {
 
 // Handler for Click Events on Time Chips
 function chipClickHandler(date, time) {
-  console.log('Chip clicked - Date:', date, 'Time:', time);
+
+// INICIO DE TRECHO INUTIL ?
+// Get the date in the local timezone
+let localDate = new Date(date);
+// Get the timezone offset in minutes
+let timezoneOffsetMinutes = localDate.getTimezoneOffset();
+// Subtract the timezone offset from the local date
+localDate.setMinutes(localDate.getMinutes() - timezoneOffsetMinutes);
+// FINAL DE TRECHO INUTIL ?
+
+  Dialog.create({
+  title: 'Escolher um horário',
+  message: `
+  <div style="font-size: 20px;">
+    <div>Você clicou em:</div>
+    <div style="color: red; font-weight: bold">${new Date(date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
+    <div style="color: red; font-weight: bold">às ${time}.</div>
+    <!-- <div>Confirma  ffffff a sua escolha?</div> --> 
+  </div>
+`,
+  html: true,
+  ok: {
+    label: 'Escolher este horário',
+
+    color: 'primary',
+  },
+    cancel: true,
+    persistent: true
+
+}).onOk(() => {
+  console.log('-- onOK --------');
+    confirmedSlots.value[date] = time; // Update the confirmed slots
+    console.log('confirmedSlots.value : ', confirmedSlots.value);
+    /* router.push('/professional-profile'); // replace this with your professional profile page route */
+    /* router.push(
+      { 
+         name: 'AppointmentOne', 
+         params: { 
+           appointmentDateTime: 
+             new Date(date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+             +
+             ' às ' + time 
+         } 
+      }
+    ); */
+
+/* router.push(
+  { 
+     name: 'AppointmentOne', 
+     params: { 
+       appointmentDateTime: encodeURIComponent(
+         new Date(date).toLocaleDateString(
+          'pt-BR', 
+          { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }
+          ) + ' às ' + time 
+       )
+     } 
+  }
+); */
+
+router.push(
+  { 
+     name: 'AppointmentOne', 
+     params: { 
+//       appointmentDateTime: encodeURIComponent('quinta-2-de-maio-de-2021-12h00')
+       appointmentDateTime: encodeURIComponent('paramAppointmentDateTime') // encoded
+     } 
+  }
+);
+
+// http://hyberson-ideal-meme-r7wr96w4gj9cp9xv-9000.preview.app.github.dev/#/appointment-two/paramAppointmentDateTime
+
+    /* router.push({ name: 'ProfessionalProfile', params: { id: professionalId } });
+    
+  */
+}).onCancel(() => {
+  console.log('Selection cancelled');
+  Notify.create({
+    color: 'negative',
+    message: 'Você não confirmou a escolha',
+    position: 'center',
+    timeout: 1000
+});
+
+/* }).onDismiss(() => {
+  console.log('Dialog dismissed');
+  Notify.create({
+    color: 'warning',
+    message: 'Você não confirmou a escolha do horário',
+    position: 'top',
+    timeout: 2000
+  }); */
+});
+
 }
+
 </script>
 
 <style scoped>
@@ -199,7 +311,7 @@ function chipClickHandler(date, time) {
 .fixed-card-1 {
     position: fixed;
     top: 60px;
-    z-index: 9999;
+    z-index: 1000;
   margin-bottom: 40px;
   background-color: #f1f2eb;
   left: 190;
@@ -211,7 +323,7 @@ function chipClickHandler(date, time) {
     top: 320px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 9999;
+    z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -227,6 +339,7 @@ function chipClickHandler(date, time) {
 .date {
   font-weight: bold;
   font-size: 24px;
+  color: red;
 }
 .times {
   display: flex;
@@ -239,7 +352,7 @@ function chipClickHandler(date, time) {
   font-weight: bold;
   font-size: 22px;
   cursor: pointer;
-  color: red;
+  color: gray;
 }
 
 .expandable-content {
@@ -257,4 +370,10 @@ function chipClickHandler(date, time) {
   margin-right: 15px;
   margin-bottom: 15px;
 }
+
+.chip-confirmed {
+  background-color: lightsteelblue;
+  border-radius: 1px;
+}
+
 </style>

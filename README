@@ -1,1 +1,11 @@
 READ ME
+Problema do redirect 
+- a) consertar a redirect url
+- b) passar a redirect url
+ como parametro na chamada de signInWithOAuth
+ 
+ O redirect é 
+ /appointment-two/paramAppointmentDateTime <------------ ESTE
+ ou
+ /paramAppointmentDateTime
+?
